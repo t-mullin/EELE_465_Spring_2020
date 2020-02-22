@@ -79,3 +79,14 @@ int main(void)
     }
 	return 0;
 }
+
+#pragma vector=USCI_B0_VECTOR
+__interrupt void USCI_B0_ISR(void) {
+    switch(UCB0IV) {
+        case 0x16:
+            data_in = UCB0RXBUF;
+            break;
+        default:
+            break;
+    }
+}

@@ -54,10 +54,10 @@ int main(void)
         if(data_ready == 1) {
             UCB0I2CSA = 0x0042;     //Slave address = 0x42 LED
             UCB0CTLW0 |= UCTXSTT;
-            for(i=0; i<100; i=i+1){}
+            for(i=0; i<100; i++){}
             UCB0I2CSA = 0x0043;     //Slave address = 0x43 LCD
             UCB0CTLW0 |= UCTXSTT;
-            for(i=0; i<100; i=i+1){}
+            for(i=0; i<100; i++){}
             data_ready = 0;
         }
     }
