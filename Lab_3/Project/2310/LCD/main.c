@@ -3,28 +3,33 @@
  * main.c
  */
 
-void delay() {
-    int i;
-    for(i = 10000; i > 0; i--) {}
+char data_in;
+
+void delay(int i) {
+    TB0CCR0 = i;
+    TB0CTL |= TBCLR;
+    while(TB0R != TB0CCR0) {}
 }
 
 void initLCD() {
-    delay();
-    P2OUT &= BIT0;
+    delay(525);     // 525 is ~16ms
+
+    //rs 2.6, rw 2.7, en 2.0
+    P2OUT |= BIT0;
     P2OUT &= BIT6;
+    P2OUT &= BIT7;
     P1OUT = 0x30;
 
-    delay();
+    delay(135);     // 135 is ~4.15ms
 
-    P2OUT &= BIT0;
     P2OUT &= BIT6;
+    P2OUT &= BIT7;
     P1OUT = 0x30;
 
-    delay();
+    delay(4);       // 4 is ~150us
 
-    P2OUT &= BIT0;
     P2OUT &= BIT6;
-
+    P2OUT &= BIT7;
     P1OUT = 0x30;
     P1OUT = 0x20;
 
@@ -38,10 +43,10 @@ void initLCD() {
     P1OUT = 0x10;
 
     P1OUT = 0x00;
-    P1OUT = 0x40;
+    P1OUT = 0x70;
 
     P1OUT = 0x00;
-    P1OUT = 0xF0;
+    P1OUT = 0xE0;
 }
 
 int main(void)
@@ -56,13 +61,19 @@ int main(void)
     UCB0CTLW0 &= ~UCTR;      //Put into Rx mode
     UCB0I2COA0 |= UCGCEN;
     UCB0I2COA0 |= UCOAEN;
+
+    //-- 2.1 - Configure Timers
+    TB0CTL |= TBCLR;
+    TB0CTL |= TBSSEL__ACLK;
+    TB0CTL |= MC__UP;
+
     //-- 3. Configure Pins
     P1SEL1 &= ~BIT3;        //P1.3 = SCL
     P1SEL0 |= BIT3;
     P1SEL1 &= ~BIT2;        //P1.2 = SDA
     P1SEL0 |= BIT2;
     //-- 3.1
-    P2DIR |= BIT0|BIT6;//|BIT7;
+    P2DIR |= BIT0|BIT6|BIT7;
     P1DIR |= BIT7|BIT6|BIT5|BIT4;//|BIT1|BIT0;
     PM5CTL0 &= ~LOCKLPM5;   //Disable LPM
     //-- 4. Take eUSCI_B0 out of SW reset
