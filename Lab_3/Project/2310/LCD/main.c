@@ -11,42 +11,57 @@ void delay(int i) {
     while(TB0R != TB0CCR0) {}
 }
 
-void initLCD() {
-    delay(525);     // 525 is ~16ms
-
-    //rs 2.6, rw 2.7, en 2.0
+void toggleEnable() {
     P2OUT |= BIT0;
-    P2OUT &= BIT6;
-    P2OUT &= BIT7;
+    delay(2);
+    P2OUT &= ~BIT0;
+}
+
+void writeToLCD() {
+    toggleEnable();
+    delay(3);
+}
+
+void init_LCD() {
+    //2 is ~75us
+    // 525 is ~16ms
+    delay(525); // Start up delay
     P1OUT = 0x30;
+    toggleEnable();
 
     delay(135);     // 135 is ~4.15ms
-
-    P2OUT &= BIT6;
-    P2OUT &= BIT7;
     P1OUT = 0x30;
+    toggleEnable();
 
     delay(4);       // 4 is ~150us
-
-    P2OUT &= BIT6;
-    P2OUT &= BIT7;
     P1OUT = 0x30;
-    P1OUT = 0x20;
+    writeToLCD();
 
     P1OUT = 0x20;
-    P1OUT = 0xC0;
+    writeToLCD();
 
-    P1OUT = 0x00;
+    P1OUT = 0x20;
+    writeToLCD();
     P1OUT = 0x80;
+    writeToLCD();
 
     P1OUT = 0x00;
+    writeToLCD();
+    P1OUT = 0xC0;
+    writeToLCD();
+
+    P1OUT = 0x00;
+    writeToLCD();
+    delay(55);
     P1OUT = 0x10;
+    writeToLCD();
+    delay(55);
 
     P1OUT = 0x00;
-    P1OUT = 0x70;
+    writeToLCD();
+    P1OUT = 0x60;
+    writeToLCD();
 
-    P1OUT = 0x00;
-    P1OUT = 0xE0;
 }
 
 int main(void)
@@ -73,8 +88,13 @@ int main(void)
     P1SEL1 &= ~BIT2;        //P1.2 = SDA
     P1SEL0 |= BIT2;
     //-- 3.1
-    P2DIR |= BIT0|BIT6|BIT7;
-    P1DIR |= BIT7|BIT6|BIT5|BIT4;//|BIT1|BIT0;
+    P1DIR |= BIT7|BIT6|BIT5|BIT4;
+    P2DIR |= BIT7|BIT6|BIT0;
+
+    P1OUT &= ~BIT7|~BIT6|~BIT5|~BIT4;
+    //rs 2.6, rw 2.7, en 2.0
+    P2OUT &= ~BIT7|~BIT6|~BIT0; //Clear RS, R/W, and enable;
+
     PM5CTL0 &= ~LOCKLPM5;   //Disable LPM
     //-- 4. Take eUSCI_B0 out of SW reset
     UCB0CTLW0 &= ~UCSWRST;  //UCSWRST=1 for eUSCI_B0 in SW reset
@@ -82,8 +102,7 @@ int main(void)
     UCB0IE |= UCRXIE0;
     __enable_interrupt();
 
-
-    initLCD();
+    init_LCD();
 
     while(1) {
 
