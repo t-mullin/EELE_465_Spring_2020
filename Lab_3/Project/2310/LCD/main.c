@@ -9,59 +9,74 @@ void delay(int i) {
     TB0CCR0 = i;
     TB0CTL |= TBCLR;
     while(TB0R != TB0CCR0) {}
+    //P2OUT ^= BIT0;
 }
 
 void toggleEnable() {
     P2OUT |= BIT0;
-    delay(2);
+    delay(4);
     P2OUT &= ~BIT0;
 }
 
 void writeToLCD() {
     toggleEnable();
-    delay(3);
+    delay(4);
 }
+
 
 void init_LCD() {
     //2 is ~75us
     // 525 is ~16ms
-    delay(525); // Start up delay
-    P1OUT = 0x30;
+    delay(1050); // Start up delay
+
+    P1OUT = 0x20;
     toggleEnable();
 
-    delay(135);     // 135 is ~4.15ms
-    P1OUT = 0x30;
+    delay(270);     // 135 is ~4.15ms
+
+    P1OUT = 0x20;
     toggleEnable();
 
-    delay(4);       // 4 is ~150us
-    P1OUT = 0x30;
-    writeToLCD();
+    delay(8);       // 4 is ~150us
 
     P1OUT = 0x20;
     writeToLCD();
 
+    //function set 4bit
     P1OUT = 0x20;
     writeToLCD();
-    P1OUT = 0x80;
-    writeToLCD();
 
-    P1OUT = 0x00;
+    //
+    P1OUT = 0x20;
     writeToLCD();
     P1OUT = 0xC0;
     writeToLCD();
 
+    //display off
     P1OUT = 0x00;
     writeToLCD();
-    delay(55);
+    P1OUT = 0x80;
+    writeToLCD();
+
+    //display clear
+    P1OUT = 0x00;
+    writeToLCD();
+    delay(110);
     P1OUT = 0x10;
     writeToLCD();
-    delay(55);
+    delay(110);
 
+    //Entry mode set
     P1OUT = 0x00;
     writeToLCD();
     P1OUT = 0x60;
     writeToLCD();
 
+    //Display on
+    P1OUT = 0x00;
+    writeToLCD();
+    P1OUT = 0xE0;
+    writeToLCD();
 }
 
 int main(void)
@@ -98,10 +113,10 @@ int main(void)
     __enable_interrupt();
 
 
-    initLCD();
+    init_LCD();
 
     while(1) {
-
+        //delay(1050);
     }
 	return 0;
 }
