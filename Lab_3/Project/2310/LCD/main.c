@@ -11,42 +11,57 @@ void delay(int i) {
     while(TB0R != TB0CCR0) {}
 }
 
-void initLCD() {
-    delay(525);     // 525 is ~16ms
-
-    //rs 2.6, rw 2.7, en 2.0
+void toggleEnable() {
     P2OUT |= BIT0;
-    P2OUT &= BIT6;
-    P2OUT &= BIT7;
+    delay(2);
+    P2OUT &= ~BIT0;
+}
+
+void writeToLCD() {
+    toggleEnable();
+    delay(3);
+}
+
+void init_LCD() {
+    //2 is ~75us
+    // 525 is ~16ms
+    delay(525); // Start up delay
     P1OUT = 0x30;
+    toggleEnable();
 
     delay(135);     // 135 is ~4.15ms
-
-    P2OUT &= BIT6;
-    P2OUT &= BIT7;
     P1OUT = 0x30;
+    toggleEnable();
 
     delay(4);       // 4 is ~150us
-
-    P2OUT &= BIT6;
-    P2OUT &= BIT7;
     P1OUT = 0x30;
-    P1OUT = 0x20;
+    writeToLCD();
 
     P1OUT = 0x20;
-    P1OUT = 0xC0;
+    writeToLCD();
 
-    P1OUT = 0x00;
+    P1OUT = 0x20;
+    writeToLCD();
     P1OUT = 0x80;
+    writeToLCD();
 
     P1OUT = 0x00;
+    writeToLCD();
+    P1OUT = 0xC0;
+    writeToLCD();
+
+    P1OUT = 0x00;
+    writeToLCD();
+    delay(55);
     P1OUT = 0x10;
+    writeToLCD();
+    delay(55);
 
     P1OUT = 0x00;
-    P1OUT = 0x70;
+    writeToLCD();
+    P1OUT = 0x60;
+    writeToLCD();
 
-    P1OUT = 0x00;
-    P1OUT = 0xE0;
 }
 
 int main(void)
