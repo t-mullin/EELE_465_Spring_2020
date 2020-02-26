@@ -158,3 +158,4 @@ __interrupt void PORT2_ISR(void){
     P2OUT = 0x0F;
     P2REN = 0x0F;
     P2IFG = 0x00;   //clear the interrupt flag
+}

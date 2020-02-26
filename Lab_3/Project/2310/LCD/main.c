@@ -9,18 +9,18 @@ void delay(int i) {
     TB0CCR0 = i;
     TB0CTL |= TBCLR;
     while(TB0R != TB0CCR0) {}
-    //P2OUT ^= BIT0;
+    P2OUT ^= BIT0;
 }
 
 void toggleEnable() {
     P2OUT |= BIT0;
-    delay(4);
+    //delay(4);
     P2OUT &= ~BIT0;
 }
 
 void writeToLCD() {
     toggleEnable();
-    delay(4);
+    delay(135);
 }
 
 
@@ -29,53 +29,47 @@ void init_LCD() {
     // 525 is ~16ms
     delay(1050); // Start up delay
 
-    P1OUT = 0x20;
+    P1OUT = 0x30;
     toggleEnable();
-
     delay(270);     // 135 is ~4.15ms
 
-    P1OUT = 0x20;
+    P1OUT = 0x30;
     toggleEnable();
-
     delay(8);       // 4 is ~150us
 
-    P1OUT = 0x20;
-    writeToLCD();
+    P1OUT = 0x30;
+    toggleEnable();
+    delay(8);     // 135 is ~4.15ms
 
     //function set 4bit
     P1OUT = 0x20;
-    writeToLCD();
+    toggleEnable();
+    delay(8);     // 135 is ~4.15ms
 
-    //
+    //function set
     P1OUT = 0x20;
-    writeToLCD();
-    P1OUT = 0xC0;
-    writeToLCD();
-
-    //display off
-    P1OUT = 0x00;
     writeToLCD();
     P1OUT = 0x80;
     writeToLCD();
 
-    //display clear
+    //display on
     P1OUT = 0x00;
     writeToLCD();
-    delay(110);
-    P1OUT = 0x10;
+    P1OUT = 0xE0;
     writeToLCD();
-    delay(110);
+
+    //display clear
+    //P1OUT = 0x00;
+    //writeToLCD();
+    //delay(110);
+    //P1OUT = 0x10;
+    //writeToLCD();
+    //delay(110);
 
     //Entry mode set
     P1OUT = 0x00;
     writeToLCD();
     P1OUT = 0x60;
-    writeToLCD();
-
-    //Display on
-    P1OUT = 0x00;
-    writeToLCD();
-    P1OUT = 0xE0;
     writeToLCD();
 }
 
@@ -103,8 +97,13 @@ int main(void)
     P1SEL1 &= ~BIT2;        //P1.2 = SDA
     P1SEL0 |= BIT2;
     //-- 3.1
-    P2DIR |= BIT0|BIT6|BIT7;
-    P1DIR |= BIT7|BIT6|BIT5|BIT4;//|BIT1|BIT0;
+    P1DIR |= BIT7|BIT6|BIT5|BIT4;
+    P2DIR |= BIT7|BIT6|BIT0;
+
+    P1OUT &= ~BIT7|~BIT6|~BIT5|~BIT4;
+    //rs 2.6, rw 2.7, en 2.0
+    P2OUT &= ~BIT7|~BIT6|~BIT0; //Clear RS, R/W, and enable;
+
     PM5CTL0 &= ~LOCKLPM5;   //Disable LPM
     //-- 4. Take eUSCI_B0 out of SW reset
     UCB0CTLW0 &= ~UCSWRST;  //UCSWRST=1 for eUSCI_B0 in SW reset
@@ -112,13 +111,49 @@ int main(void)
     UCB0IE |= UCRXIE0;
     __enable_interrupt();
 
-
     init_LCD();
 
     while(1) {
-        //delay(1050);
+        /*
+        switch(data_in) {
+            case '0':
+                break;
+            case '1':
+                delay(1000);
+                break;
+            case '2':
+                break;
+            case '3':
+                break;
+            case '4':
+                break;
+            case '5':
+                break;
+            case '6':
+                break;
+            case '7':
+                break;
+            case '8':
+                break;
+            case '9':
+                break;
+            case 'A':
+                break;
+            case 'B':
+                break;
+            case 'C':
+                break;
+            case 'D':
+                break;
+            case '*':
+                break;
+            case '#':
+                break;
+            default:
+                break;
+        }*/
     }
-	return 0;
+    return 0;
 }
 
 #pragma vector=USCI_B0_VECTOR
