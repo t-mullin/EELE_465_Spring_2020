@@ -8,26 +8,22 @@ unsigned int position = 0;
 
 void delay(unsigned int i) {
     unsigned int j;
-    //1600 is ~15.33 ms
     //1700 is ~16 ms
-    //400 is ~4 ms
-    //450 is ~4.3 ms
     //500 is ~4.8 ms
     //10 is ~130 us
-    //5 is ~84.5 us
     //2 is ~53.2 us
-    //1 is ~44.6 us
     for(j = 0; j < i; j=j+1) {}
 }
 
-void toggleEnable() {
-    P2OUT |= BIT0;
-    P2OUT &= ~BIT0;
-}
+//void toggleEnable() {
+//    P2OUT |= BIT0;
+//    P2OUT &= ~BIT0;
+//}
 
 void writeToLCD(int nibble, unsigned int delayNum) {
     P1OUT = nibble;
-    toggleEnable();
+    P2OUT |= BIT0;
+    P2OUT &= ~BIT0;
     delay(delayNum);
 }
 
@@ -37,16 +33,8 @@ void init_LCD() {
     delay(1700); // Start up delay
     //function set 8-bit, delay > 4.1ms
     writeToLCD(0x30, 500);
-    //P2OUT |= BIT0;
-    //P1OUT = 0x30;
-    //P2OUT &= ~BIT0;
-    //delay(500);
     //function set 8-bit, delay > 150us
     writeToLCD(0x30, 10);
-    //P2OUT |= BIT0;
-    //P1OUT = 0x30;
-    //P2OUT &= ~BIT0;
-    //delay(10);
     //function set, delay 8-bit, > 40us
     writeToLCD(0x30, 2);
 
@@ -86,10 +74,14 @@ void setRS_RW(unsigned int rs, unsigned int rw) {
 }
 
 void checkEndOfScreen() {
+    setRS_RW(0, 0);
     if(position == 16) {
-        setRS_RW(0, 0);
         writeToLCD(0xC0, 2);
         writeToLCD(0x00, 2);
+    } else if (position == 33) {
+        writeToLCD(0x00, 2);
+        writeToLCD(0x10, 2);
+        position = 0;
     }
 }
 
@@ -139,7 +131,6 @@ int main(void)
                 writeToLCD(0x00, 2);
                 setRS_RW(0, 0);
                 position++;
-                data_in = 'x';
                 break;
             case '1':
                 setRS_RW(1, 1);
@@ -148,7 +139,6 @@ int main(void)
                 writeToLCD(0x10, 2);
                 setRS_RW(0, 0);
                 position++;
-                data_in = 'x';
                 break;
             case '2':
                 setRS_RW(1, 1);
@@ -157,7 +147,6 @@ int main(void)
                 writeToLCD(0x20, 2);
                 setRS_RW(0, 0);
                 position++;
-                data_in = 'x';
                 break;
             case '3':
                 setRS_RW(1, 1);
@@ -166,7 +155,6 @@ int main(void)
                 writeToLCD(0x30, 2);
                 setRS_RW(0, 0);
                 position++;
-                data_in = 'x';
                 break;
             case '4':
                 setRS_RW(1, 1);
@@ -175,7 +163,6 @@ int main(void)
                 writeToLCD(0x40, 2);
                 setRS_RW(0, 0);
                 position++;
-                data_in = 'x';
                 break;
             case '5':
                 setRS_RW(1, 1);
@@ -183,7 +170,7 @@ int main(void)
                 setRS_RW(1, 0);
                 writeToLCD(0x50, 2);
                 setRS_RW(0, 0);
-                data_in = 'x';
+                position++;
                 break;
             case '6':
                 setRS_RW(1, 1);
@@ -191,7 +178,7 @@ int main(void)
                 setRS_RW(1, 0);
                 writeToLCD(0x60, 2);
                 setRS_RW(0, 0);
-                data_in = 'x';
+                position++;
                 break;
             case '7':
                 setRS_RW(1, 1);
@@ -199,7 +186,7 @@ int main(void)
                 setRS_RW(1, 0);
                 writeToLCD(0x70, 2);
                 setRS_RW(0, 0);
-                data_in = 'x';
+                position++;
                 break;
             case '8':
                 setRS_RW(1, 1);
@@ -207,7 +194,7 @@ int main(void)
                 setRS_RW(1, 0);
                 writeToLCD(0x80, 2);
                 setRS_RW(0, 0);
-                data_in = 'x';
+                position++;
                 break;
             case '9':
                 setRS_RW(1, 1);
@@ -215,7 +202,7 @@ int main(void)
                 setRS_RW(1, 0);
                 writeToLCD(0x90, 2);
                 setRS_RW(0, 0);
-                data_in = 'x';
+                position++;
                 break;
             case 'A':
                 setRS_RW(1, 1);
@@ -223,7 +210,7 @@ int main(void)
                 setRS_RW(1, 0);
                 writeToLCD(0x10, 2);
                 setRS_RW(0, 0);
-                data_in = 'x';
+                position++;
                 break;
             case 'B':
                 setRS_RW(1, 1);
@@ -231,7 +218,7 @@ int main(void)
                 setRS_RW(1, 0);
                 writeToLCD(0x20, 2);
                 setRS_RW(0, 0);
-                data_in = 'x';
+                position++;
                 break;
             case 'C':
                 setRS_RW(1, 1);
@@ -239,7 +226,7 @@ int main(void)
                 setRS_RW(1, 0);
                 writeToLCD(0x30, 2);
                 setRS_RW(0, 0);
-                data_in = 'x';
+                position++;
                 break;
             case 'D':
                 setRS_RW(1, 1);
@@ -247,7 +234,7 @@ int main(void)
                 setRS_RW(1, 0);
                 writeToLCD(0x40, 2);
                 setRS_RW(0, 0);
-                data_in = 'x';
+                position++;
                 break;
             case '*':
                 setRS_RW(1, 1);
@@ -255,7 +242,7 @@ int main(void)
                 setRS_RW(1, 0);
                 writeToLCD(0x50, 2);
                 setRS_RW(0, 0);
-                data_in = 'x';
+                position++;
                 break;
             case '#':
                 setRS_RW(1, 1);
@@ -263,12 +250,13 @@ int main(void)
                 setRS_RW(1, 0);
                 writeToLCD(0x60, 2);
                 setRS_RW(0, 0);
-                data_in = 'x';
+                position++;
                 break;
             default:
                 break;
         }
-        checkEndOfScreen();
+        data_in = 'x';
+         checkEndOfScreen();
     }
     return 0;
 }
