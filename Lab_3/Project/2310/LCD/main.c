@@ -4,6 +4,7 @@
  */
 
 char data_in = 'x';
+unsigned int position = 0;
 
 void delay(unsigned int i) {
     unsigned int j;
@@ -70,6 +71,28 @@ void init_LCD() {
     writeToLCD(0x60, 2); //01I/DS, I/D = increment/decrement, S = shifts the display when 1
 }
 
+void setRS_RW(unsigned int rs, unsigned int rw) {
+    if (rs == 1) {
+        P2OUT |= BIT6;
+    } else {
+        P2OUT &= ~BIT6;
+    }
+    if(rw == 1) {
+        P1OUT |= BIT0;
+    } else {
+        P1OUT &= ~BIT0;
+    }
+
+}
+
+void checkEndOfScreen() {
+    if(position == 16) {
+        setRS_RW(0, 0);
+        writeToLCD(0xC0, 2);
+        writeToLCD(0x00, 2);
+    }
+}
+
 int main(void)
 {
     WDTCTL = WDTPW | WDTHOLD;
@@ -110,152 +133,142 @@ int main(void)
         //need to check if near the end of a line and/or if the display is full
         switch(data_in) {
             case '0':
-                P2OUT |= BIT6;
-                P1OUT |= BIT0;
+                setRS_RW(1, 1);
                 writeToLCD(0x30, 2);
-                P1OUT &= ~BIT0;
+                setRS_RW(1, 0);
                 writeToLCD(0x00, 2);
-                P2OUT &= ~BIT6;
+                setRS_RW(0, 0);
+                position++;
                 data_in = 'x';
                 break;
             case '1':
-                P2OUT |= BIT6;
-                P1OUT |= BIT0;
+                setRS_RW(1, 1);
                 writeToLCD(0x30, 2);
-                P1OUT &= ~BIT0;
+                setRS_RW(1, 0);
                 writeToLCD(0x10, 2);
-                P2OUT &= ~BIT6;
+                setRS_RW(0, 0);
+                position++;
                 data_in = 'x';
                 break;
             case '2':
-                P2OUT |= BIT6;
-                P1OUT |= BIT0;
+                setRS_RW(1, 1);
                 writeToLCD(0x30, 2);
-                P1OUT &= ~BIT0;
+                setRS_RW(1, 0);
                 writeToLCD(0x20, 2);
-                P2OUT &= ~BIT6;
+                setRS_RW(0, 0);
+                position++;
                 data_in = 'x';
                 break;
             case '3':
-                P2OUT |= BIT6;
-                P1OUT |= BIT0;
+                setRS_RW(1, 1);
                 writeToLCD(0x30, 2);
-                P1OUT &= ~BIT0;
+                setRS_RW(1, 0);
                 writeToLCD(0x30, 2);
-                P2OUT &= ~BIT6;
+                setRS_RW(0, 0);
+                position++;
                 data_in = 'x';
                 break;
             case '4':
-                P2OUT |= BIT6;
-                P1OUT |= BIT0;
+                setRS_RW(1, 1);
                 writeToLCD(0x30, 2);
-                P1OUT &= ~BIT0;
+                setRS_RW(1, 0);
                 writeToLCD(0x40, 2);
-                P2OUT &= ~BIT6;
+                setRS_RW(0, 0);
+                position++;
                 data_in = 'x';
                 break;
             case '5':
-                P2OUT |= BIT6;
-                P1OUT |= BIT0;
+                setRS_RW(1, 1);
                 writeToLCD(0x30, 2);
-                P1OUT &= ~BIT0;
+                setRS_RW(1, 0);
                 writeToLCD(0x50, 2);
-                P2OUT &= ~BIT6;
+                setRS_RW(0, 0);
                 data_in = 'x';
                 break;
             case '6':
-                P2OUT |= BIT6;
-                P1OUT |= BIT0;
+                setRS_RW(1, 1);
                 writeToLCD(0x30, 2);
-                P1OUT &= ~BIT0;
+                setRS_RW(1, 0);
                 writeToLCD(0x60, 2);
-                P2OUT &= ~BIT6;
+                setRS_RW(0, 0);
                 data_in = 'x';
                 break;
             case '7':
-                P2OUT |= BIT6;
-                P1OUT |= BIT0;
+                setRS_RW(1, 1);
                 writeToLCD(0x30, 2);
-                P1OUT &= ~BIT0;
+                setRS_RW(1, 0);
                 writeToLCD(0x70, 2);
-                P2OUT &= ~BIT6;
+                setRS_RW(0, 0);
                 data_in = 'x';
                 break;
             case '8':
-                P2OUT |= BIT6;
-                P1OUT |= BIT0;
+                setRS_RW(1, 1);
                 writeToLCD(0x30, 2);
-                P1OUT &= ~BIT0;
+                setRS_RW(1, 0);
                 writeToLCD(0x80, 2);
-                P2OUT &= ~BIT6;
+                setRS_RW(0, 0);
                 data_in = 'x';
                 break;
             case '9':
-                P2OUT |= BIT6;
-                P1OUT |= BIT0;
+                setRS_RW(1, 1);
                 writeToLCD(0x30, 2);
-                P1OUT &= ~BIT0;
+                setRS_RW(1, 0);
                 writeToLCD(0x90, 2);
-                P2OUT &= ~BIT6;
+                setRS_RW(0, 0);
                 data_in = 'x';
                 break;
             case 'A':
-                P2OUT |= BIT6;
-                P1OUT |= BIT0;
+                setRS_RW(1, 1);
                 writeToLCD(0x40, 2);
-                P1OUT &= ~BIT0;
+                setRS_RW(1, 0);
                 writeToLCD(0x10, 2);
-                P2OUT &= ~BIT6;
+                setRS_RW(0, 0);
                 data_in = 'x';
                 break;
             case 'B':
-                P2OUT |= BIT6;
-                P1OUT |= BIT0;
+                setRS_RW(1, 1);
                 writeToLCD(0x40, 2);
-                P1OUT &= ~BIT0;
+                setRS_RW(1, 0);
                 writeToLCD(0x20, 2);
-                P2OUT &= ~BIT6;
+                setRS_RW(0, 0);
                 data_in = 'x';
                 break;
             case 'C':
-                P2OUT |= BIT6;
-                P1OUT |= BIT0;
+                setRS_RW(1, 1);
                 writeToLCD(0x40, 2);
-                P1OUT &= ~BIT0;
+                setRS_RW(1, 0);
                 writeToLCD(0x30, 2);
-                P2OUT &= ~BIT6;
+                setRS_RW(0, 0);
                 data_in = 'x';
                 break;
             case 'D':
-                P2OUT |= BIT6;
-                P1OUT |= BIT0;
+                setRS_RW(1, 1);
                 writeToLCD(0x40, 2);
-                P1OUT &= ~BIT0;
+                setRS_RW(1, 0);
                 writeToLCD(0x40, 2);
-                P2OUT &= ~BIT6;
+                setRS_RW(0, 0);
                 data_in = 'x';
                 break;
             case '*':
-                P2OUT |= BIT6;
-                P1OUT |= BIT0;
+                setRS_RW(1, 1);
                 writeToLCD(0x40, 2);
-                P1OUT &= ~BIT0;
+                setRS_RW(1, 0);
                 writeToLCD(0x50, 2);
-                P2OUT &= ~BIT6;
+                setRS_RW(0, 0);
                 data_in = 'x';
                 break;
             case '#':
-                P2OUT |= BIT6;
-                P1OUT |= BIT0;
+                setRS_RW(1, 1);
                 writeToLCD(0x40, 2);
-                P1OUT &= ~BIT0;
+                setRS_RW(1, 0);
                 writeToLCD(0x60, 2);
-                P2OUT &= ~BIT6;
+                setRS_RW(0, 0);
                 data_in = 'x';
                 break;
             default:
                 break;
         }
+        checkEndOfScreen();
     }
     return 0;
 }
