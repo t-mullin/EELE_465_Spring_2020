@@ -3,44 +3,65 @@
  * main.c
  */
 
-char data_in;
+char data_in = 'x';
 
-void delay(int i) {
-    TB0CCR0 = i;
-    TB0CTL |= TBCLR;
-    while(TB0R != TB0CCR0) {}
+void delay(unsigned int i) {
+    //TB0CCR0 = i;
+    //TB0CTL |= TBCLR;
+    //while(TB0R != TB0CCR0) {}
+    //P2OUT ^= BIT0;
+    unsigned int j;
+    for(j = 0; j < 10000; j=j+1) {}
     P2OUT ^= BIT0;
 }
 
 void toggleEnable() {
     P2OUT |= BIT0;
-    //delay(4);
     P2OUT &= ~BIT0;
 }
 
-void writeToLCD() {
+void writeToLCD(int nibble, int delayNum) {
+    P1OUT = nibble;
     toggleEnable();
-    delay(135);
+    delay(delayNum);
 }
 
 
 void init_LCD() {
+
     //2 is ~75us
+    // 4 is ~150us
+    // 135 is ~4.15ms
     // 525 is ~16ms
-    delay(1050); // Start up delay
 
-    P1OUT = 0x30;
-    toggleEnable();
-    delay(270);     // 135 is ~4.15ms
+    delay(525); // Start up delay
 
-    P1OUT = 0x30;
-    toggleEnable();
-    delay(8);       // 4 is ~150us
+    //function set 8-bit, delay > 4.1ms
+    writeToLCD(0x30, 135);
+    //function set 8-bit, delay > 150us
+    writeToLCD(0x30, 4);
+    //function set, delay 8-bit, > 40us
+    writeToLCD(0x30, 4);
 
-    P1OUT = 0x30;
-    toggleEnable();
-    delay(8);     // 135 is ~4.15ms
+    //function set 4-bit, delay > 40us
+    writeToLCD(0x30, 4);
 
+    //function set 4-bit
+    writeToLCD(0x20, 0);
+    writeToLCD(0x80, 0); //NF**, N = # of lines, F = Char font
+
+    //Display off
+    writeToLCD(0x00, 0);
+    writeToLCD(0x10, 0); //1DCB, D = toggle display on/off, C = cursor, B = blink
+
+    //Entry Mode Set
+    writeToLCD(0x00, 0);
+    writeToLCD(0x60, 0); //01I/DS, I/D = increment/decrement, S = shifts the display when 1
+
+    //Display on
+    writeToLCD(0x00, 0);
+    writeToLCD(0xE0, 0); //1DCB, D = toggle display on/off, C = cursor, B = blink
+    /*
     //function set 4bit
     P1OUT = 0x20;
     toggleEnable();
@@ -71,6 +92,7 @@ void init_LCD() {
     writeToLCD();
     P1OUT = 0x60;
     writeToLCD();
+*/
 }
 
 int main(void)
@@ -87,9 +109,9 @@ int main(void)
     UCB0I2COA0 |= UCOAEN;
 
     //-- 2.1 - Configure Timers
-    TB0CTL |= TBCLR;
-    TB0CTL |= TBSSEL__ACLK;
-    TB0CTL |= MC__UP;
+    //TB0CTL |= TBCLR;
+    //TB0CTL |= TBSSEL__ACLK;
+    //TB0CTL |= MC__UP;
 
     //-- 3. Configure Pins
     P1SEL1 &= ~BIT3;        //P1.3 = SCL
@@ -101,8 +123,8 @@ int main(void)
     P2DIR |= BIT7|BIT6|BIT0;
 
     P1OUT &= ~BIT7|~BIT6|~BIT5|~BIT4;
-    //rs 2.6, rw 2.7, en 2.0
-    P2OUT &= ~BIT7|~BIT6|~BIT0; //Clear RS, R/W, and enable;
+    //rs 2.6, en 2.0
+    P2OUT &= ~BIT6|~BIT0; //Clear RS and enable;
 
     PM5CTL0 &= ~LOCKLPM5;   //Disable LPM
     //-- 4. Take eUSCI_B0 out of SW reset
@@ -111,9 +133,10 @@ int main(void)
     UCB0IE |= UCRXIE0;
     __enable_interrupt();
 
-    init_LCD();
+    //init_LCD();
 
     while(1) {
+        delay(1);
         /*
         switch(data_in) {
             case '0':
