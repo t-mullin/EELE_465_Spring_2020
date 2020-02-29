@@ -256,7 +256,7 @@ int main(void)
                 break;
         }
         data_in = 'x';
-         checkEndOfScreen();
+        checkEndOfScreen();
     }
     return 0;
 }
