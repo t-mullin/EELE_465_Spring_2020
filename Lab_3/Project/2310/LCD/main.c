@@ -1,3 +1,6 @@
+//Lizzy Hamaoka & Tristan Mullin
+//3/3/2020
+//Lab 3: Setting up an LCD to display characters from keypad input
 #include <msp430.h> 
 /**
  * main.c
@@ -15,18 +18,14 @@ void delay(unsigned int i) {
     for(j = 0; j < i; j=j+1) {}
 }
 
-//void toggleEnable() {
-//    P2OUT |= BIT0;
-//    P2OUT &= ~BIT0;
-//}
-
+//Writes the nibble to the lcd
 void writeToLCD(int nibble, unsigned int delayNum) {
     P1OUT = nibble;
     P2OUT |= BIT0;
     P2OUT &= ~BIT0;
     delay(delayNum);
 }
-
+//software initialization of the LCD
 void init_LCD() {
     //after flashing, remove the debug RX and TX pins
     //they were causing the lcd to not display correctly
@@ -59,6 +58,7 @@ void init_LCD() {
     writeToLCD(0x60, 2); //01I/DS, I/D = increment/decrement, S = shifts the display when 1
 }
 
+//sets the rs and rw depending on what needs to be written or read
 void setRS_RW(unsigned int rs, unsigned int rw) {
     if (rs == 1) {
         P2OUT |= BIT6;
@@ -73,6 +73,7 @@ void setRS_RW(unsigned int rs, unsigned int rw) {
 
 }
 
+//checks to see if the cursor has reached the end of the screen then wraps or clears the screen
 void checkEndOfScreen() {
     setRS_RW(0, 0);
     if(position == 16) {
@@ -97,21 +98,17 @@ int main(void)
     UCB0CTLW0 &= ~UCTR;      //Put into Rx mode
     UCB0I2COA0 |= UCGCEN;
     UCB0I2COA0 |= UCOAEN;
-
     //-- 3. Configure Pins
     P1SEL1 &= ~BIT3;        //P1.3 = SCL
     P1SEL0 |= BIT3;
     P1SEL1 &= ~BIT2;        //P1.2 = SDA
     P1SEL0 |= BIT2;
     //-- 3.1
-
     P1DIR |= BIT7|BIT6|BIT5|BIT4|BIT0;
     P2DIR |= BIT6|BIT0;
-
     P1OUT &= ~BIT7|~BIT6|~BIT5|~BIT4|~BIT0;
     // r/w 1.0, rs 2.6, en 2.0
     P2OUT &= ~BIT6|~BIT0; //Clear R/W, RS, and enable;
-
     PM5CTL0 &= ~LOCKLPM5;   //Disable LPM
     //-- 4. Take eUSCI_B0 out of SW reset
     UCB0CTLW0 &= ~UCSWRST;  //UCSWRST=1 for eUSCI_B0 in SW reset
@@ -260,7 +257,7 @@ int main(void)
     }
     return 0;
 }
-
+//------- Interrupt Service Routines ---------------------------
 #pragma vector=USCI_B0_VECTOR
 __interrupt void USCI_B0_ISR(void) {
     switch(UCB0IV) {

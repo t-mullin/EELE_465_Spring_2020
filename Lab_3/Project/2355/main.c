@@ -1,3 +1,6 @@
+//Lizzy Hamaoka & Tristan Mullin
+//3/3/2020
+//Lab 3: Setting up an LCD to display characters from keypad input
 #include <msp430.h> 
 
 

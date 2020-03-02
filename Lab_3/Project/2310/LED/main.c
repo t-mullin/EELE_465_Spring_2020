@@ -1,3 +1,6 @@
+//Lizzy Hamaoka & Tristan Mullin
+//3/3/2020
+//Lab 3: Setting up an LCD to display characters from keypad input
 #include <msp430.h> 
 
 char data_in = '0';
@@ -113,7 +116,7 @@ int main(void) {
     }
     return 0;
 }
-
+//------- Interrupt Service Routines ---------------------------
 #pragma vector=USCI_B0_VECTOR
 __interrupt void USCI_B0_ISR(void) {
     switch(UCB0IV) {
