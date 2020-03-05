@@ -131,12 +131,12 @@ int main(void)
     init_LCD();
 
     while(1) {
-        //checkEndOfScreen();
         //need to check if near the end of a line and/or if the display is full
-        //if(data_ready == 1) {
-        //    writeChar(data_in);
-        //    data_ready = 0;
-        //}
+        if(data_ready == 1) {
+            checkEndOfScreen();
+            writeChar(data_in);
+            data_ready = 0;
+        }
     }
     return 0;
 }
