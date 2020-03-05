@@ -132,8 +132,8 @@ int main(void)
 
     while(1) {
         //need to check if near the end of a line and/or if the display is full
+        checkEndOfScreen();
         if(data_ready == 1) {
-            checkEndOfScreen();
             writeChar(data_in);
             data_ready = 0;
         }
