@@ -9,6 +9,12 @@
  */
 char input;
 int data_ready = 0;
+
+void delay(int delayNum) {
+    int i;
+    for(i = 0; i < delayNum; i++) {}
+}
+
 int main(void)
 {
     WDTCTL = WDTPW | WDTHOLD;   // stop watchdog timer
@@ -61,6 +67,7 @@ int main(void)
 
     //-- 5. Enable Interrupts
     UCB0IE |= UCTXIE0;      //Enable I2C Tx0 IRQ
+    UCA0IE |= UCRXIE;
     P2IFG = 0x00;
     P2IES = 0x0F;
     P2IE = 0x0F;
@@ -68,14 +75,17 @@ int main(void)
 
     int i = 0;
     while(1){
-        UCA0TXBUF = 'A';
         if(data_ready == 1) {
             UCB0I2CSA = 0x0042;     //Slave address = 0x42 LED
             UCB0CTLW0 |= UCTXSTT;
-            for(i=0; i<100; i++){}
+            delay(100);
+            //for(i=0; i<100; i++){}
             UCB0I2CSA = 0x0043;     //Slave address = 0x43 LCD
             UCB0CTLW0 |= UCTXSTT;
-            for(i=0; i<100; i++){}
+            delay(100);
+            //for(i=0; i<100; i++){}
+            UCA0TXBUF = input;      //sending data back to terminal
+            delay(10000);
             data_ready = 0;
         }
     }
@@ -91,6 +101,12 @@ __interrupt void USCI_B0_ISR(void) {
         default:
             break;
     }
+}
+
+#pragma vector=USCI_A0_VECTOR
+__interrupt void USCI_A0_RX_ISR(void) {
+    input = UCA0RXBUF;
+    data_ready = 1;
 }
 
 #pragma vector=PORT2_VECTOR
