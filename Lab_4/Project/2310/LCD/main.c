@@ -1,11 +1,10 @@
 //Lizzy Hamaoka & Tristan Mullin
-//3/3/2020
-//Lab 3: Setting up an LCD to display characters from keypad input
+//3/17/2020
+//Lab 4: Setting up RS-232 communication between a computer and master micro-controller
 #include <msp430.h> 
 /**
  * main.c
  */
-
 char data_in = 'x';
 unsigned int position = 0;
 int data_ready = 0;
@@ -88,6 +87,7 @@ void checkEndOfScreen() {
     }
 }
 
+//Writes the character to the LCD screen
 void writeChar(char input) {
     setRS_RW(1, 1);
     writeToLCD(input, 2);
@@ -131,8 +131,8 @@ int main(void)
     init_LCD();
 
     while(1) {
-        //need to check if near the end of a line and/or if the display is full
         checkEndOfScreen();
+        //checks to see if there has been any data has been recived
         if(data_ready == 1) {
             writeChar(data_in);
             data_ready = 0;

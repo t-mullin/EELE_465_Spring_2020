@@ -1,9 +1,7 @@
 //Lizzy Hamaoka & Tristan Mullin
-//3/3/2020
-//Lab 3: Setting up an LCD to display characters from keypad input
+//3/17/2020
+//Lab 4: Setting up RS-232 communication between a computer and master micro-controller
 #include <msp430.h> 
-
-
 /**
  * main.c
  */
@@ -39,7 +37,6 @@ int main(void)
     UCA0BRW = 3;
     UCA0MCTLW |= 0x9200;
 
-
     //-- 3.A Configure Pins
     P1SEL1 &= ~BIT3;        //P1.3 = SCL
     P1SEL0 |= BIT3;
@@ -67,7 +64,7 @@ int main(void)
 
     //-- 5. Enable Interrupts
     UCB0IE |= UCTXIE0;      //Enable I2C Tx0 IRQ
-    UCA0IE |= UCRXIE;
+    UCA0IE |= UCRXIE;       //Enable UART RX IRQ
     P2IFG = 0x00;
     P2IES = 0x0F;
     P2IE = 0x0F;
