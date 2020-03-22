@@ -1,18 +1,17 @@
 //Lizzy Hamaoka & Tristan Mullin
-//3/17/2020
-//Lab 4: Setting up RS-232 communication between a computer and master micro-controller
+//3/31/2020
+//Lab 5: Temperature readings from LM19 and MSP430 being displayed on a LCD
 #include <msp430.h> 
-/**
- * main.c
- */
-char data_in = 'x';
+
 unsigned int position = 0;
+int messagePosition = 0;
 int data_ready = 0;
+char message[11];
 char enterMessage[] = "Enter n:";
-char LM19Message[]  = " T,K:kk  T,C:cc ";
-char MSP430Message[]  = " T,K:kk  T,C:cc ";
+char LM19Message[]  = " T,K:kkk T,C:cc ";
+char MSP430Message[]  = " T,K:kkk T,C:cc ";
 
-
+//simple for loop based delay function
 void delay(unsigned int i) {
     unsigned int j;
     //1700 is ~16 ms
@@ -34,33 +33,23 @@ void writeToLCD(int nibble, unsigned int delayNum) {
 void init_LCD() {
     //after flashing, remove the debug RX and TX pins
     //they were causing the lcd to not display correctly
-    delay(1700); // Start up delay
-    //function set 8-bit, delay > 4.1ms
-    writeToLCD(0x30, 500);
-    //function set 8-bit, delay > 150us
-    writeToLCD(0x30, 10);
-    //function set, delay 8-bit, > 40us
-    writeToLCD(0x30, 2);
+    delay(1700);           // Start up delay
+    writeToLCD(0x30, 500); //function set 8-bit, delay > 4.1ms
+    writeToLCD(0x30, 10);  //function set 8-bit, delay > 150us
+    writeToLCD(0x30, 2);   //function set, delay 8-bit, > 40us
 
-    //function set 4-bit, delay > 40us
-    writeToLCD(0x20, 2);
-    //function set 4-bit
-    writeToLCD(0x20, 2);
-    writeToLCD(0x80, 2); //NF**, N = # of lines, F = Char font
+    writeToLCD(0x20, 2);   //function set 4-bit, delay > 40us
+    writeToLCD(0x20, 2);   //function set 4-bit
+    writeToLCD(0x80, 2);   //NF**, N = # of lines, F = Char font
 
-    //Display on
-    writeToLCD(0x00, 2);
-    writeToLCD(0xF0, 2); //1DCB, D = toggle display on/off, C = cursor, B = blink
+    writeToLCD(0x00, 2);   //Display on
+    writeToLCD(0xF0, 2);   //1DCB, D = toggle display on/off, C = cursor, B = blink
 
-    //Clear display
-    writeToLCD(0x00, 2);
-    delay(170);
-    writeToLCD(0x10, 2);
-    delay(170);
+    writeToLCD(0x00, 172);   //Clear display
+    writeToLCD(0x10, 172);
 
-    //Entry Mode Set
-    writeToLCD(0x00, 2);
-    writeToLCD(0x60, 2); //01I/DS, I/D = increment/decrement, S = shifts the display when 1
+    writeToLCD(0x00, 2);   //Entry Mode Set
+    writeToLCD(0x60, 2);   //01I/DS, I/D = increment/decrement, S = shifts the display when 1
 }
 
 //sets the rs and rw depending on what needs to be written or read
@@ -101,6 +90,7 @@ void writeChar(char input) {
     position++;
 }
 
+//writes the "Enter n:" message to the LCD
 void writeDefault() {
     int i;
     for(i = 0; i < sizeof(enterMessage)-1; i++) {
@@ -108,8 +98,25 @@ void writeDefault() {
     }
 }
 
+//sets the temperature data into the correct spots in the temperature messages
+void setTemperature() {
+    LM19Message[5] = message[1];
+    LM19Message[6] = message[2];
+    LM19Message[7] = message[3];
+    LM19Message[13] = message[4];
+    LM19Message[14] = message[5];
+
+    MSP430Message[5] = message[6];
+    MSP430Message[6] = message[7];
+    MSP430Message[7] = message[8];
+    MSP430Message[13] = message[9];
+    MSP430Message[14] = message[10];
+}
+
+//writes the temperature messages to the LCD
 void writeTemperature() {
     int i;
+    setTemperature();
     for(i = 0; i < sizeof(LM19Message)-1; i++) {
         writeChar(LM19Message[i]);
     }
@@ -119,12 +126,11 @@ void writeTemperature() {
     }
 }
 
+//clears the LCD screen
 void clearScreen() {
     setRS_RW(0, 0);
-    writeToLCD(0x00, 2);
-    delay(170);
-    writeToLCD(0x10, 2);
-    delay(170);
+    writeToLCD(0x00, 172);
+    writeToLCD(0x10, 172);
     position = 0;
 }
 
@@ -163,10 +169,9 @@ int main(void)
     writeDefault();
 
     while(1) {
-        //checkEndOfScreen();
-        //checks to see if there has been any data has been recived
+        //checks to see if there has been any data has been received
         if(data_ready == 1) {
-            switch(data_in) {
+            switch(message[0]) {
                 case '1':
                 case '2':
                 case '3':
@@ -176,7 +181,7 @@ int main(void)
                 case '7':
                 case '8':
                 case '9':
-                    writeChar(data_in);
+                    writeChar(message[0]);
                     delay(50000);
                     clearScreen();
                     writeTemperature();
@@ -193,12 +198,19 @@ int main(void)
     return 0;
 }
 //------- Interrupt Service Routines ---------------------------
+//I2C
 #pragma vector=USCI_B0_VECTOR
 __interrupt void USCI_B0_ISR(void) {
     switch(UCB0IV) {
         case 0x16:
-            data_in = UCB0RXBUF;
-            data_ready = 1;
+            if(messagePosition == (sizeof(message) - 1)) {
+                message[messagePosition] = UCB0RXBUF;
+                messagePosition = 0;
+                data_ready = 1;
+            } else {
+                message[messagePosition] = UCB0RXBUF;
+                messagePosition++;
+            }
             break;
         default:
             break;
