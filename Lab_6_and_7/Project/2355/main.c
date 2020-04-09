@@ -11,7 +11,7 @@
 char input;
 int data_ready = 0;
 int position = 0;
-char message[11]; // ie 12302323023
+char message[7]; // ie 1230232
 float LM19TempK, LM19TempC;
 float MSP430TempK, MSP430TempC;
 unsigned int V_temp;
@@ -174,8 +174,7 @@ void generateMessage() {
     }
 }
 
-int main(void)
-{
+int main(void) {
     WDTCTL = WDTPW | WDTHOLD;   // stop watchdog timer
 
     init_I2C();     //initialize I2C module
@@ -190,15 +189,9 @@ int main(void)
     while(1){
         if(data_ready == 1) {
             switch(input) {
+                case '0':
                 case '1':
                 case '2':
-                case '3':
-                case '4':
-                case '5':
-                case '6':
-                case '7':
-                case '8':
-                case '9':
                     getTemperature();
                     generateMessage();
                     sendDataToSlave();

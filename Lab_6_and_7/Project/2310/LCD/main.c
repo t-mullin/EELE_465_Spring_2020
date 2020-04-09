@@ -6,10 +6,30 @@
 unsigned int position = 0;
 int messagePosition = 0;
 int data_ready = 0;
-char message[11];
-char enterMessage[] = "Enter n:";
-char LM19Message[]  = " T,K:kkk T,C:cc ";
-char MSP430Message[]  = " T,K:kkk T,C:cc ";
+char message[7];
+char topLine[] = "TEC state: OFF  ";
+char bottomLine[]  = "T92:   K@T=   s ";
+
+void init_I2C() {
+    //-- 1. Put eUSCI_B0 into software reset
+    UCB0CTLW0 |= UCSWRST;   //UCSWRST=1 for eUSCI_B0 in SW reset
+    //-- 2. Configure eUSCI_B0
+    UCB0CTLW0 |= UCMODE_3;  //Put into I2C mode
+    UCB0I2COA0 = 0x0043;     //Slave address = 0x42
+    UCB0CTLW0 &= ~UCMST;     //Put into slave mode
+    UCB0CTLW0 &= ~UCTR;      //Put into Rx mode
+    UCB0I2COA0 |= UCGCEN;
+    UCB0I2COA0 |= UCOAEN;
+    //-- 3. Configure Pins
+    P1SEL1 &= ~BIT3;        //P1.3 = SCL
+    P1SEL0 |= BIT3;
+    P1SEL1 &= ~BIT2;        //P1.2 = SDA
+    P1SEL0 |= BIT2;
+    //-- 4. Take eUSCI_B0 out of SW reset
+    UCB0CTLW0 &= ~UCSWRST;  //UCSWRST=1 for eUSCI_B0 in SW reset
+    //-- 5. Enable Interrupts
+    UCB0IE |= UCRXIE0;
+}
 
 //simple for loop based delay function
 void delay(unsigned int i) {
@@ -31,6 +51,13 @@ void writeToLCD(int nibble, unsigned int delayNum) {
 
 //software initialization of the LCD
 void init_LCD() {
+    //-- 3.1
+    P1DIR |= BIT7|BIT6|BIT5|BIT4|BIT0;
+    P2DIR |= BIT6|BIT0;
+    P1OUT &= ~BIT7|~BIT6|~BIT5|~BIT4|~BIT0;
+    // r/w 1.0, rs 2.6, en 2.0
+    P2OUT &= ~BIT6|~BIT0; //Clear R/W, RS, and enable;
+
     //after flashing, remove the debug RX and TX pins
     //they were causing the lcd to not display correctly
     delay(1700);           // Start up delay
@@ -90,39 +117,23 @@ void writeChar(char input) {
     position++;
 }
 
-//writes the "Enter n:" message to the LCD
-void writeDefault() {
+void setMessage(char mode[]) {
     int i;
-    for(i = 0; i < sizeof(enterMessage)-1; i++) {
-        writeChar(enterMessage[i]);
+    for(i = 0; i < 4; i++) {
+        topLine[11+i] = mode[i];
     }
+
 }
 
-//sets the temperature data into the correct spots in the temperature messages
-void setTemperature() {
-    LM19Message[5] = message[1];
-    LM19Message[6] = message[2];
-    LM19Message[7] = message[3];
-    LM19Message[13] = message[4];
-    LM19Message[14] = message[5];
-
-    MSP430Message[5] = message[6];
-    MSP430Message[6] = message[7];
-    MSP430Message[7] = message[8];
-    MSP430Message[13] = message[9];
-    MSP430Message[14] = message[10];
-}
-
-//writes the temperature messages to the LCD
-void writeTemperature() {
+//writes the "Enter n:" message to the LCD
+void writeMessage() {
     int i;
-    setTemperature();
-    for(i = 0; i < sizeof(LM19Message)-1; i++) {
-        writeChar(LM19Message[i]);
+    for(i = 0; i < sizeof(topLine)-1; i++) {
+        writeChar(topLine[i]);
     }
     checkEndOfScreen();
-    for(i = 0; i < sizeof(MSP430Message)-1; i++) {
-        writeChar(MSP430Message[i]);
+    for(i = 0; i < sizeof(bottomLine)-1; i++) {
+        writeChar(bottomLine[i]);
     }
 }
 
@@ -134,63 +145,36 @@ void clearScreen() {
     position = 0;
 }
 
-int main(void)
-{
+int main(void) {
     WDTCTL = WDTPW | WDTHOLD;
-    //-- 1. Put eUSCI_B0 into software reset
-    UCB0CTLW0 |= UCSWRST;   //UCSWRST=1 for eUSCI_B0 in SW reset
-    //-- 2. Configure eUSCI_B0
-    UCB0CTLW0 |= UCMODE_3;  //Put into I2C mode
-    UCB0I2COA0 = 0x0043;     //Slave address = 0x42
-    UCB0CTLW0 &= ~UCMST;     //Put into slave mode
-    UCB0CTLW0 &= ~UCTR;      //Put into Rx mode
-    UCB0I2COA0 |= UCGCEN;
-    UCB0I2COA0 |= UCOAEN;
-    //-- 3. Configure Pins
-    P1SEL1 &= ~BIT3;        //P1.3 = SCL
-    P1SEL0 |= BIT3;
-    P1SEL1 &= ~BIT2;        //P1.2 = SDA
-    P1SEL0 |= BIT2;
-    //-- 3.1
-    P1DIR |= BIT7|BIT6|BIT5|BIT4|BIT0;
-    P2DIR |= BIT6|BIT0;
-    P1OUT &= ~BIT7|~BIT6|~BIT5|~BIT4|~BIT0;
-    // r/w 1.0, rs 2.6, en 2.0
-    P2OUT &= ~BIT6|~BIT0; //Clear R/W, RS, and enable;
+
+    init_I2C();     //initialize I2C module
+
     PM5CTL0 &= ~LOCKLPM5;   //Disable LPM
-    //-- 4. Take eUSCI_B0 out of SW reset
-    UCB0CTLW0 &= ~UCSWRST;  //UCSWRST=1 for eUSCI_B0 in SW reset
-    //-- 5. Enable Interrupts
-    UCB0IE |= UCRXIE0;
     __enable_interrupt();
 
-    init_LCD();
+    init_LCD();     //initialize LCD module
 
-    writeDefault();
+    writeMessage();
 
     while(1) {
         //checks to see if there has been any data has been received
         if(data_ready == 1) {
             switch(message[0]) {
-                case '1':
-                case '2':
-                case '3':
-                case '4':
-                case '5':
-                case '6':
-                case '7':
-                case '8':
-                case '9':
-                    writeChar(message[0]);
-                    delay(50000);
+                case '0':
                     clearScreen();
-                    writeTemperature();
-                    data_ready = 0;
+                    setMessage("OFF ");
+                    writeMessage();
                     break;
-                case '*':
+                case '1':
                     clearScreen();
-                    writeDefault();
-                    data_ready = 0;
+                    setMessage("HEAT");
+                    writeMessage();
+                    break;
+                case '2':
+                    clearScreen();
+                    setMessage("COOL");
+                    writeMessage();
                     break;
             }
         }
