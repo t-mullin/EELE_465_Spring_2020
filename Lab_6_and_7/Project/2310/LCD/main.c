@@ -6,7 +6,7 @@
 unsigned int position = 0;
 int messagePosition = 0;
 int data_ready = 0;
-char message[7];
+char message[7]; //0123456
 char topLine[] = "TEC state: OFF  ";
 char bottomLine[]  = "T92:000K@T=000s ";
 
@@ -124,6 +124,7 @@ void setMessage(char mode[]) {
     }
     for(i = 0; i < 3; i++) {
         bottomLine[4+i] = message[1+i];
+        bottomLine[11+i] = message[4+i];
     }
 
 }
