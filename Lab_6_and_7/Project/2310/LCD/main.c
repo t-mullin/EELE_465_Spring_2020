@@ -8,14 +8,14 @@ int messagePosition = 0;
 int data_ready = 0;
 char message[7];
 char topLine[] = "TEC state: OFF  ";
-char bottomLine[]  = "T92:   K@T=   s ";
+char bottomLine[]  = "T92:000K@T=000s ";
 
 void init_I2C() {
     //-- 1. Put eUSCI_B0 into software reset
     UCB0CTLW0 |= UCSWRST;   //UCSWRST=1 for eUSCI_B0 in SW reset
     //-- 2. Configure eUSCI_B0
     UCB0CTLW0 |= UCMODE_3;  //Put into I2C mode
-    UCB0I2COA0 = 0x0043;     //Slave address = 0x42
+    UCB0I2COA0 = 0x0043;     //Slave address = 0x43
     UCB0CTLW0 &= ~UCMST;     //Put into slave mode
     UCB0CTLW0 &= ~UCTR;      //Put into Rx mode
     UCB0I2COA0 |= UCGCEN;
@@ -122,6 +122,9 @@ void setMessage(char mode[]) {
     for(i = 0; i < 4; i++) {
         topLine[11+i] = mode[i];
     }
+    for(i = 0; i < 3; i++) {
+        bottomLine[4+i] = message[1+i];
+    }
 
 }
 
@@ -135,6 +138,7 @@ void writeMessage() {
     for(i = 0; i < sizeof(bottomLine)-1; i++) {
         writeChar(bottomLine[i]);
     }
+    data_ready = 0;
 }
 
 //clears the LCD screen

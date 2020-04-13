@@ -1,7 +1,14 @@
 //Lizzy Hamaoka & Tristan Mullin
 //3/31/2020
 //Lab 5: Temperature readings from LM19 and MSP430 being displayed on a LCD
+
+/*
+ * TODO: change some variable names to make it clearer what they are for.
+ *
+ * */
+
 #include <msp430.h> 
+#include <math.h>
 
 //-- Define Constants
 #define CALADC12_1_5V_30C *((unsigned int *)0x1A1A)
@@ -11,10 +18,11 @@
 char input;
 int data_ready = 0;
 int position = 0;
+int mode = 0;
+int getLow = 0;
+int tempLM92;
+float tempTemp = 0;
 char message[7]; // ie 1230232
-float LM19TempK, LM19TempC;
-float MSP430TempK, MSP430TempC;
-unsigned int V_temp;
 //-- End of Global Variables
 
 //-- Initialization Functions
@@ -39,6 +47,7 @@ void init_I2C() {
     UCB0CTLW0 &= ~UCSWRST;  //UCSWRST=1 for eUSCI_B0 in SW reset
     //-- 5. Enable Interrupts
     UCB0IE |= UCTXIE0;      //Enable I2C Tx0 IRQ
+    UCB0IE |= UCRXIE0;      //Enable I2C Rx0 IRQ
 }
 
 void init_UART() {
@@ -69,23 +78,6 @@ void init_Keypad() {
     P2IE = 0x0F;
 
 }
-
-void init_ADC() {
-    //-- 1.C Initialize ADC & Temp Sensor
-    PMMCTL2 |= TSENSOREN;   //enable internal temp sensor
-    ADCCTL0 &= ~ADCSHT;     //Clear ADCSHT from def. of ADCSHT=01
-    ADCCTL0 |= ADCSHT_2;    //Conversion Cycles = 16 (ADCSHT=10)
-    ADCCTL0 |= ADCON;       //Turn ADC on
-    ADCCTL1 |= ADCSSEL_2;   //ADC Clock Source = SMCLK
-    ADCCTL1 |= ADCSHP;      //Sample signal source = sampling timer
-    ADCCTL2 &= ~ADCRES;     //Clear ADCRES from def. of ADCRES=01
-    ADCCTL2 |= ADCRES_2;    //Resolution = 12-bit (ADCRES=10)
-    ADCMCTL0 |= ADCINCH_11; //ADC Input Channel = A11 (P5.3)
-    ADCIE |= ADCIE0;        //Enable ADC Conv Complete IRQ
-    //-- 2.C Configure Pins
-    P5SEL1 |= BIT3;         //Sets P5.3 to be an ADC input
-    P5SEL0 |= BIT3;
-}
 //-- End of Initialization Functions
 
 //simple for loop based delay function
@@ -94,8 +86,50 @@ void delay(int delayNum) {
     for(i = 0; i < delayNum; i++) {}
 }
 
+//changes the number of bytes that are sent by I2C
+void setI2CByteNum(int bytes) {
+    //-- 1.A Put eUSCI_B0 into software reset
+    UCB0CTLW0 |= UCSWRST;   //UCSWRST=1 for eUSCI_B0 in SW reset
+    if(bytes == 7) {
+        UCB0TBCNT = sizeof(message);       //Send eleven bytes of data
+    } else if (bytes == 1) {
+        UCB0TBCNT = 0x01;
+    } else if (bytes == 2) {
+        UCB0TBCNT = 0x02;
+    }
+    //-- 4.A Take eUSCI_B0 out of SW reset
+    UCB0CTLW0 &= ~UCSWRST;  //UCSWRST=1 for eUSCI_B0 in SW reset
+    //-- 5. Enable Interrupts
+    UCB0IE |= UCTXIE0;      //Enable I2C Tx0 IRQ
+    UCB0IE |= UCRXIE0;      //Enable I2C Rx0 IRQ
+}
+
+//gets the temperature from LM92 temperature sensor
+void getTemperature() {
+    setI2CByteNum(1);
+    mode = 1;
+    UCB0CTLW0 |= UCTR;      //Put into Tx mode
+    UCB0I2CSA = 0x0048;     //Slave address = 0x48 LM92
+    UCB0CTLW0 |= UCTXSTT;
+    delay(100);
+    setI2CByteNum(2);
+    UCB0CTLW0 &= ~UCTR;      //Put into Rx mode
+    UCB0I2CSA = 0x0048;     //Slave address = 0x48 LM92
+    UCB0CTLW0 |= UCTXSTT;
+    delay(100);
+
+    int i;
+    for(i = 0; i < 3; i++) {
+        message[3-i] = (tempLM92 % 10) + '0';
+        tempLM92 /= 10;
+    }
+}
+
 //starts the I2C and UART transmissions.
 void sendDataToSlave() {
+    mode = 3;
+    setI2CByteNum(7);     //initialize I2C module
+    UCB0CTLW0 |= UCTR;      //Put into Tx mode
     UCB0I2CSA = 0x0042;     //Slave address = 0x42 LED
     UCB0CTLW0 |= UCTXSTT;
     delay(100);
@@ -107,79 +141,12 @@ void sendDataToSlave() {
     data_ready = 0;
 }
 
-//function to get the temperature from the LM19 sensor
-void getLM19Temperature() {
-    int i;
-    ADCCTL0 &= ~ADCENC;
-    ADCMCTL0 = 0x000B;  //sets the ADC channel to 11 (pin 40)
-    for(i = 0; i < (int)input-48; i++) {
-        ADCCTL0 |= ADCENC | ADCSC;
-        while((ADCIFG & ADCIFG0) == 0); //waits until conversion is done
-        LM19TempC += (float)(1.8641 - ((float)V_temp*0.00080859))/0.01171; //formula from datasheet for -10C to 65C
-    }
-    LM19TempC = LM19TempC / (input-48); //averaging the temperature
-    LM19TempK = LM19TempC + 273.15; //getting the temperature in kelvin
-}
-
-//function to get the temperature from the MSP430 temperature sensor
-void getMSP430Temperature() {
-    int i;
-    ADCCTL0 &= ~ADCENC;
-    ADCMCTL0 = 0x000C;  //sets the ADC channel to 12 (internal temp sensor)
-    for(i = 0; i < (int)input-48; i++) {
-        ADCCTL0 |= ADCENC | ADCSC;
-        while((ADCIFG & ADCIFG0) == 0); //waits until conversion is done
-        MSP430TempC += (float)((long)V_temp - CALADC12_1_5V_30C) * 0.00355 + 30; //formula from datasheet
-    }
-    MSP430TempC = MSP430TempC / (input-48); //averaging the temperature
-    MSP430TempK = MSP430TempC + 273.15; //getting the temperature in kelvin
-}
-
-//calls the functions to get the temperature data from the sensors
-void getTemperature() {
-    getLM19Temperature();
-    getMSP430Temperature();
-}
-
-//clears the temperature data
-void clearTemperature() {
-    LM19TempC = 0;
-    LM19TempK = 0;
-    MSP430TempC = 0;
-    MSP430TempK = 0;
-}
-
-//packages the data into a char array
-void generateMessage() {
-    int i;
-    int temp;
-    int temp1;
-    message[0] = input;
-
-    temp = (int)LM19TempK;
-    temp1 = (int)MSP430TempK;
-    for(i = 0; i < 3; i++) {
-        message[3-i] = (temp % 10) + '0';
-        message[8-i] = (temp1 % 10) + '0';
-        temp /= 10;
-        temp1 /= 10;
-    }
-    temp = (int)LM19TempC;
-    temp1 = (int)MSP430TempC;
-    for(i = 0; i < 2; i++) {
-        message[5-i] = (temp % 10) + '0';
-        message[10-i] = (temp1 % 10) + '0';
-        temp /= 10;
-        temp1 /= 10;
-    }
-}
 
 int main(void) {
     WDTCTL = WDTPW | WDTHOLD;   // stop watchdog timer
 
     init_I2C();     //initialize I2C module
     init_UART();    //initialize UART module
-    init_ADC();     //initialize ADC module
     init_Keypad();  //initialize Keypad
 
     PM5CTL0 &= ~LOCKLPM5;   //Disable LPM
@@ -190,15 +157,18 @@ int main(void) {
         if(data_ready == 1) {
             switch(input) {
                 case '0':
-                case '1':
-                case '2':
+                    message[0] = '0';
                     getTemperature();
-                    generateMessage();
                     sendDataToSlave();
-                    clearTemperature();
                     break;
-                case '*':
-                    message[0] = input;
+                case '1':
+                    message[0] = '1';
+                    getTemperature();
+                    sendDataToSlave();
+                    break;
+                case '2':
+                    message[0] = '2';
+                    getTemperature();
                     sendDataToSlave();
                     break;
             }
@@ -211,13 +181,34 @@ int main(void) {
 #pragma vector=USCI_B0_VECTOR
 __interrupt void USCI_B0_ISR(void) {
     switch (UCB0IV) {
-        case 0x18: //Vector 24 TXIFG0
-            if(position == (sizeof(message) - 1)) {
-                UCB0TXBUF = message[position];
-                position = 0;
+        case 0x16:
+            if(mode == 1) {
+                if(getLow == 1) {
+                    tempLM92 += UCB0RXBUF;
+                    tempLM92 = tempLM92 >> 3;
+                    tempTemp = tempLM92*0.0625;
+                    tempLM92 = round(273.15+tempTemp);
+                    getLow = 0;
+                } else {
+                    tempLM92 = UCB0RXBUF;
+                    tempLM92 = tempLM92 << 8;
+                    getLow = 1;
+                }
             } else {
-                UCB0TXBUF = message[position];
-                position++;
+
+            }
+            break;
+        case 0x18: //Vector 24 TXIFG0
+            if(mode == 1 || mode == 2) {
+                UCB0TXBUF = 0x00;
+            } else {
+                if(position == (sizeof(message) - 1)) {
+                    UCB0TXBUF = message[position];
+                    position = 0;
+                } else {
+                    UCB0TXBUF = message[position];
+                    position++;
+                }
             }
             break;
         default:
@@ -230,12 +221,6 @@ __interrupt void USCI_B0_ISR(void) {
 __interrupt void USCI_A0_RX_ISR(void) {
     input = UCA0RXBUF;
     data_ready = 1;
-}
-
-//ADC
-#pragma vector=ADC_VECTOR
-__interrupt void ADC_ISR(void) {
-    V_temp = ADCMEM0;
 }
 
 //PORT2

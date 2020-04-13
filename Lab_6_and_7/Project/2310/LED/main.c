@@ -5,7 +5,7 @@
 
 int data_ready = 0;
 int messagePosition = 0;
-char message[11];
+char message[7];
 
 //sends the hex values to the dff
 void sendHex() {
