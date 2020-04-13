@@ -125,6 +125,20 @@ void getTemperature() {
     }
 }
 
+void getTime() {
+    setI2CByteNum(1);
+    mode = 2;
+    UCB0CTLW0 |= UCTR;      //Put into Tx mode
+    UCB0I2CSA = 0x0068;     //Slave address = 0x48 LM92
+    UCB0CTLW0 |= UCTXSTT;
+    delay(50);
+    setI2CByteNum(1);
+    UCB0CTLW0 &= ~UCTR;      //Put into Rx mode
+    UCB0I2CSA = 0x0068;     //Slave address = 0x48 LM92
+    UCB0CTLW0 |= UCTXSTT;
+    delay(50);
+}
+
 //starts the I2C and UART transmissions.
 void sendDataToSlave() {
     mode = 3;
@@ -154,6 +168,8 @@ int main(void) {
     __enable_interrupt();   //Enable Maskable IRQs
 
     while(1){
+        getTime();
+        /*
         if(data_ready == 1) {
             switch(input) {
                 case '0':
@@ -173,6 +189,7 @@ int main(void) {
                     break;
             }
         }
+        */
     }
     return 0;
 }
@@ -199,7 +216,9 @@ __interrupt void USCI_B0_ISR(void) {
             }
             break;
         case 0x18: //Vector 24 TXIFG0
-            if(mode == 1 || mode == 2) {
+            if(mode == 1) {
+                UCB0TXBUF = 0x00;
+            } else if (mode == 2) {
                 UCB0TXBUF = 0x00;
             } else {
                 if(position == (sizeof(message) - 1)) {
