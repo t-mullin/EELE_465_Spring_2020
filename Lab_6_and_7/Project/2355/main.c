@@ -1,10 +1,10 @@
 //Lizzy Hamaoka & Tristan Mullin
-//3/31/2020
-//Lab 5: Temperature readings from LM19 and MSP430 being displayed on a LCD
+//5/4/2020
+//Lab 6 & 7: Temperature readings from LM92, Time readings DS1337 RTC being displayed on a LCD, and
+//Thermoelectric cooler state controller.
 
 /*
  * TODO: change some variable names to make it clearer what they are for.
- *       disable timer when reseting the timer registers so that it can finish
  * */
 
 #include <msp430.h> 
@@ -15,6 +15,7 @@ char input = '0';
 int data_ready = 0;
 int position = 0;
 int mode = 0;
+int resetClock = 0;
 int getLow = 0;
 int tempLM92;
 float tempTemp = 0;
@@ -94,6 +95,11 @@ void init_TimerB() {
     TB0CTL &= ~TBIFG;                  //Clears Timer B0 Flag
 
 }
+
+void init_ControlLines() {
+    P4DIR |= BIT1|BIT0;
+    P4OUT &= ~BIT1|~BIT0;
+}
 //-- End of Initialization Functions
 
 //simple for loop based delay function
@@ -105,34 +111,34 @@ void delay(int delayNum) {
 //changes the number of bytes that are sent by I2C
 void setI2CByteNum(int bytes) {
     //-- 1. Put eUSCI_B0 into software reset
-    UCB0CTLW0 |= UCSWRST;                  //UCSWRST=1 for eUSCI_B0 in SW reset
+    UCB0CTLW0 |= UCSWRST;              //UCSWRST=1 for eUSCI_B0 in SW reset
     if(bytes == 7) {
-        UCB0TBCNT = sizeof(message);       //Send 7 bytes of data
+        UCB0TBCNT = sizeof(message);   //Send 7 bytes of data
     } else if (bytes == 1) {
-        UCB0TBCNT = 0x01;
+        UCB0TBCNT = 0x01;              //Send 1 byte of data
     } else if (bytes == 2) {
-        UCB0TBCNT = 0x02;
+        UCB0TBCNT = 0x02;              //Send 2 bytes of data
     } else if (bytes == 3) {
-        UCB0TBCNT = 0x03;
+        UCB0TBCNT = 0x03;              //Send 3 bytes of data
     }
     //-- 4. Take eUSCI_B0 out of SW reset
-    UCB0CTLW0 &= ~UCSWRST;                 //UCSWRST=1 for eUSCI_B0 in SW reset
+    UCB0CTLW0 &= ~UCSWRST;             //UCSWRST=1 for eUSCI_B0 in SW reset
     //-- 5. Enable Interrupts
-    UCB0IE |= UCTXIE0;                     //Enable I2C Tx0 IRQ
-    UCB0IE |= UCRXIE0;                     //Enable I2C Rx0 IRQ
+    UCB0IE |= UCTXIE0;                 //Enable I2C Tx0 IRQ
+    UCB0IE |= UCRXIE0;                 //Enable I2C Rx0 IRQ
 }
 
 //gets the temperature from LM92 temperature sensor
 void getTemperature() {
     setI2CByteNum(1);
     mode = 1;
-    UCB0CTLW0 |= UCTR;                     //Put into Tx mode
-    UCB0I2CSA = 0x0048;                    //Slave address = 0x48 LM92
+    UCB0CTLW0 |= UCTR;                 //Put into Tx mode
+    UCB0I2CSA = 0x0048;                //Slave address = 0x48 LM92
     UCB0CTLW0 |= UCTXSTT;
     delay(100);
     setI2CByteNum(2);
-    UCB0CTLW0 &= ~UCTR;                    //Put into Rx mode
-    UCB0I2CSA = 0x0048;                    //Slave address = 0x48 LM92
+    UCB0CTLW0 &= ~UCTR;                //Put into Rx mode
+    UCB0I2CSA = 0x0048;                //Slave address = 0x48 LM92
     UCB0CTLW0 |= UCTXSTT;
     delay(100);
 
@@ -145,25 +151,35 @@ void getTemperature() {
 
 //clears the DS1337 RTCs first 2 registers (seconds & minutes)
 void clearClock() {
+    TB0CTL &= ~TBIE;                    //Enable Timer B0 IRQ
+
     setI2CByteNum(3);
     mode = 2;
-    UCB0CTLW0 |= UCTR;                     //Put into Tx mode
-    UCB0I2CSA = 0x0068;                    //Slave address = 0x68 DS1337 RTC
+    UCB0CTLW0 |= UCTR;                 //Put into Tx mode
+    UCB0I2CSA = 0x0068;                //Slave address = 0x68 DS1337 RTC
     UCB0CTLW0 |= UCTXSTT;
     delay(100);
+
+    init_TimerB();
 }
 
 //gets the time from the DS1337 RTCs first 2 registers (seconds & minutes)
 void getTime() {
+    //resets the clock if there has been any new input
+    if(resetClock == 1) {
+        clearClock();
+        resetClock = 0;
+    }
+
     setI2CByteNum(1);
     mode = 2;
-    UCB0CTLW0 |= UCTR;                     //Put into Tx mode
-    UCB0I2CSA = 0x0068;                    //Slave address = 0x68 DS1337 RTC
+    UCB0CTLW0 |= UCTR;                 //Put into Tx mode
+    UCB0I2CSA = 0x0068;                //Slave address = 0x68 DS1337 RTC
     UCB0CTLW0 |= UCTXSTT;
     delay(100);
     setI2CByteNum(2);
-    UCB0CTLW0 &= ~UCTR;                    //Put into Rx mode
-    UCB0I2CSA = 0x0068;                    //Slave address = 0x68 DS1337 RTC
+    UCB0CTLW0 &= ~UCTR;                //Put into Rx mode
+    UCB0I2CSA = 0x0068;                //Slave address = 0x68 DS1337 RTC
     UCB0CTLW0 |= UCTXSTT;
     delay(100);
 
@@ -198,8 +214,6 @@ void sendDataToSlave() {
     UCB0I2CSA = 0x0043;     //Slave address = 0x43 LCD
     UCB0CTLW0 |= UCTXSTT;
     delay(100);
-    UCA0TXBUF = input;      //sending data back to terminal
-    delay(10000);
     data_ready = 0;
 }
 
@@ -207,10 +221,11 @@ void sendDataToSlave() {
 int main(void) {
     WDTCTL = WDTPW | WDTHOLD;   // stop watchdog timer
 
-    init_I2C();     //initialize I2C module
-    init_UART();    //initialize UART module
-    init_Keypad();  //initialize Keypad
-    init_TimerB();  //initialize TimerB
+    init_I2C();             //initialize I2C module
+    init_UART();            //initialize UART module
+    init_Keypad();          //initialize Keypad
+    init_TimerB();          //initialize TimerB
+    init_ControlLines();    //initialize Control Lines for TEC
 
     PM5CTL0 &= ~LOCKLPM5;   //Disable LPM
 
@@ -228,6 +243,8 @@ int main(void) {
                         getTemperature();
                     }
                     sendDataToSlave();
+                    P4OUT &= ~BIT0;
+                    P4OUT &= ~BIT1;
                     break;
                 case '1':
                     message[0] = '1';
@@ -236,6 +253,8 @@ int main(void) {
                         getTemperature();
                     }
                     sendDataToSlave();
+                    P4OUT |= BIT1;
+                    P4OUT &= ~BIT0;
                     break;
                 case '2':
                     message[0] = '2';
@@ -244,6 +263,8 @@ int main(void) {
                         getTemperature();
                     }
                     sendDataToSlave();
+                    P4OUT |= BIT0;
+                    P4OUT &= ~BIT1;
                     break;
             }
         }
@@ -311,8 +332,8 @@ __interrupt void USCI_B0_ISR(void) {
 #pragma vector=USCI_A0_VECTOR
 __interrupt void USCI_A0_RX_ISR(void) {
     input = UCA0RXBUF;
-    clearClock();
-    init_TimerB();
+    UCA0TXBUF = input;
+    resetClock = 1;
     data_ready = 1;
 }
 
@@ -395,6 +416,7 @@ __interrupt void PORT2_ISR(void) {
         default:
             break;
     }
+    resetClock = 1;
     //resets the direction, input mask, and resistors
     P2DIR = 0xF0;           //Upper 4 bits set as outputs, Lower 4 bits set as inputs
     P2OUT = 0x0F;

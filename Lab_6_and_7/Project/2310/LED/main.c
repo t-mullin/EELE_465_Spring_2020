@@ -1,6 +1,7 @@
 //Lizzy Hamaoka & Tristan Mullin
-//3/31/2020
-//Lab 5: Temperature readings from LM19 and MSP430 being displayed on a LCD
+//5/4/2020
+//Lab 6 & 7: Temperature readings from LM92, Time readings DS1337 RTC being displayed on a LCD, and
+//Thermoelectric cooler state controller.
 #include <msp430.h> 
 
 int data_ready = 0;
