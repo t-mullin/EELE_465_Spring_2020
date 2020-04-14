@@ -10,10 +10,6 @@
 #include <msp430.h> 
 #include <math.h>
 
-//-- Define Constants
-#define CALADC12_1_5V_30C *((unsigned int *)0x1A1A)
-//-- End of Define Constants
-
 //-- Global Variables
 char input = '0';
 int data_ready = 0;
@@ -35,49 +31,49 @@ char message[7]; // ie 1230232
 
 //-- Initialization Functions
 void init_I2C() {
-    //-- 1.A Put eUSCI_B0 into software reset
-    UCB0CTLW0 |= UCSWRST;   //UCSWRST=1 for eUSCI_B0 in SW reset
-    //-- 2.A Configure eUSCI_B0
-    UCB0CTLW0 |= UCSSEL_3;  //Choose BRCLK=SMCLK=1MHz
-    UCB0BRW = 10;           //Divide BRCLK by 10 for SCL=100kHz
-    UCB0CTLW0 |= UCMODE_3;  //Put into I2C mode
-    UCB0CTLW0 |= UCMST;     //Put into master mode
-    UCB0CTLW0 |= UCTR;      //Put into Tx mode
-    UCB0I2CSA = 0x0042;     //Initial Slave address = 0x42
-    UCB0CTLW1 |= UCASTP_2;  //Auto STOP when UCB0TBCNT reached
-    UCB0TBCNT = sizeof(message);       //Send eleven bytes of data
-    //-- 3.A Configure Pins
-    P1SEL1 &= ~BIT3;        //P1.3 = SCL
+    //-- 1. Put eUSCI_B0 into software reset
+    UCB0CTLW0 |= UCSWRST;              //UCSWRST=1 for eUSCI_B0 in SW reset
+    //-- 2. Configure eUSCI_B0
+    UCB0CTLW0 |= UCSSEL_3;             //Choose BRCLK=SMCLK=1MHz
+    UCB0BRW = 10;                      //Divide BRCLK by 10 for SCL=100kHz
+    UCB0CTLW0 |= UCMODE_3;             //Put into I2C mode
+    UCB0CTLW0 |= UCMST;                //Put into master mode
+    UCB0CTLW0 |= UCTR;                 //Put into Tx mode
+    UCB0I2CSA = 0x0042;                //Initial Slave address = 0x42
+    UCB0CTLW1 |= UCASTP_2;             //Auto STOP when UCB0TBCNT reached
+    UCB0TBCNT = sizeof(message);       //Send 7 bytes of data
+    //-- 3. Configure Pins
+    P1SEL1 &= ~BIT3;                   //P1.3 = SCL
     P1SEL0 |= BIT3;
-    P1SEL1 &= ~BIT2;        //P1.2 = SDA
+    P1SEL1 &= ~BIT2;                   //P1.2 = SDA
     P1SEL0 |= BIT2;
-    //-- 4.A Take eUSCI_B0 out of SW reset
-    UCB0CTLW0 &= ~UCSWRST;  //UCSWRST=1 for eUSCI_B0 in SW reset
+    //-- 4. Take eUSCI_B0 out of SW reset
+    UCB0CTLW0 &= ~UCSWRST;             //UCSWRST=1 for eUSCI_B0 in SW reset
     //-- 5. Enable Interrupts
-    UCB0IE |= UCTXIE0;      //Enable I2C Tx0 IRQ
-    UCB0IE |= UCRXIE0;      //Enable I2C Rx0 IRQ
+    UCB0IE |= UCTXIE0;                 //Enable I2C Tx0 IRQ
+    UCB0IE |= UCRXIE0;                 //Enable I2C Rx0 IRQ
 }
 
 void init_UART() {
-    //-- 1.B Put eUSCI_A0 into software reset
-    UCA0CTLW0 |= UCSWRST;   //UCSWRST=1 for eUSCI_B0 in SW reset
-    //-- 2.B Configure eUSCI_A0
-    UCA0CTLW0 |= UCSSEL__ACLK;  //Choose BRCLK=ACLK=32.768kHz
-    UCA0BRW = 3;
-    UCA0MCTLW |= 0x9200;
-    //-- 3.B
-    P1SEL1 &= ~BIT6;        //P1.6 = RX
+    //-- 1. Put eUSCI_A0 into software reset
+    UCA0CTLW0 |= UCSWRST;              //UCSWRST=1 for eUSCI_B0 in SW reset
+    //-- 2. Configure eUSCI_A0
+    UCA0CTLW0 |= UCSSEL__ACLK;         //Choose BRCLK=ACLK=32.768kHz
+    UCA0BRW = 3;                       //Pre-scaler = 3
+    UCA0MCTLW |= 0x9200;               //Modulation
+    //-- 3.
+    P1SEL1 &= ~BIT6;                   //P1.6 = RX
     P1SEL0 |= BIT6;
-    P1SEL1 &= ~BIT7;        //P1.7 = TX
+    P1SEL1 &= ~BIT7;                   //P1.7 = TX
     P1SEL0 |= BIT7;
-    //-- 4.B Take eUSCI_A0 out of SW reset
-    UCA0CTLW0 &= ~UCSWRST;  //UCSWRST=1 for eUSCI_A0 in SW reset
+    //-- 4. Take eUSCI_A0 out of SW reset
+    UCA0CTLW0 &= ~UCSWRST;             //UCSWRST=1 for eUSCI_A0 in SW reset
     //-- 5. Enable Interrupts
-    UCA0IE |= UCRXIE;       //Enable UART RX IRQ
+    UCA0IE |= UCRXIE;                  //Enable UART RX IRQ
 }
 
 void init_Keypad() {
-    P2DIR = 0xF0;           //Upper 4 bits set as outputs, Lower 4 bits set as inputs
+    P2DIR = 0xF0;                      //Upper 4 bits set as outputs, Lower 4 bits set as inputs
     P2OUT = 0x0F;
     P2REN = 0x0F;
     //-- 5. Enable Interrupts
@@ -88,14 +84,14 @@ void init_Keypad() {
 }
 
 void init_TimerB() {
-    TB0CTL |= TBCLR;
-    TB0CTL |= TBSSEL__ACLK;
-    TB0CTL |= MC__CONTINUOUS;
-    TB0CTL |= CNTL_1;
-    TB0CTL |= ID__8;
-
-    TB0CTL |= TBIE;
-    TB0CTL &= ~TBIFG;
+    TB0CTL |= TBCLR;                   //Clears timer and dividers
+    TB0CTL |= TBSSEL__ACLK;            //Clock Source: ACLK=32.768kHz
+    TB0CTL |= MC__CONTINUOUS;          //Clock Mode: Continuous
+    TB0CTL |= CNTL_1;                  //Clock Bit Length: 12-bit
+    TB0CTL |= ID__8;                   //Clock Divider: 8
+    //-- 5. Enable Interrupts
+    TB0CTL |= TBIE;                    //Enable Timer B0 IRQ
+    TB0CTL &= ~TBIFG;                  //Clears Timer B0 Flag
 
 }
 //-- End of Initialization Functions
@@ -108,10 +104,10 @@ void delay(int delayNum) {
 
 //changes the number of bytes that are sent by I2C
 void setI2CByteNum(int bytes) {
-    //-- 1.A Put eUSCI_B0 into software reset
-    UCB0CTLW0 |= UCSWRST;   //UCSWRST=1 for eUSCI_B0 in SW reset
+    //-- 1. Put eUSCI_B0 into software reset
+    UCB0CTLW0 |= UCSWRST;                  //UCSWRST=1 for eUSCI_B0 in SW reset
     if(bytes == 7) {
-        UCB0TBCNT = sizeof(message);       //Send eleven bytes of data
+        UCB0TBCNT = sizeof(message);       //Send 7 bytes of data
     } else if (bytes == 1) {
         UCB0TBCNT = 0x01;
     } else if (bytes == 2) {
@@ -119,24 +115,24 @@ void setI2CByteNum(int bytes) {
     } else if (bytes == 3) {
         UCB0TBCNT = 0x03;
     }
-    //-- 4.A Take eUSCI_B0 out of SW reset
-    UCB0CTLW0 &= ~UCSWRST;  //UCSWRST=1 for eUSCI_B0 in SW reset
+    //-- 4. Take eUSCI_B0 out of SW reset
+    UCB0CTLW0 &= ~UCSWRST;                 //UCSWRST=1 for eUSCI_B0 in SW reset
     //-- 5. Enable Interrupts
-    UCB0IE |= UCTXIE0;      //Enable I2C Tx0 IRQ
-    UCB0IE |= UCRXIE0;      //Enable I2C Rx0 IRQ
+    UCB0IE |= UCTXIE0;                     //Enable I2C Tx0 IRQ
+    UCB0IE |= UCRXIE0;                     //Enable I2C Rx0 IRQ
 }
 
 //gets the temperature from LM92 temperature sensor
 void getTemperature() {
     setI2CByteNum(1);
     mode = 1;
-    UCB0CTLW0 |= UCTR;      //Put into Tx mode
-    UCB0I2CSA = 0x0048;     //Slave address = 0x48 LM92
+    UCB0CTLW0 |= UCTR;                     //Put into Tx mode
+    UCB0I2CSA = 0x0048;                    //Slave address = 0x48 LM92
     UCB0CTLW0 |= UCTXSTT;
     delay(100);
     setI2CByteNum(2);
-    UCB0CTLW0 &= ~UCTR;      //Put into Rx mode
-    UCB0I2CSA = 0x0048;     //Slave address = 0x48 LM92
+    UCB0CTLW0 &= ~UCTR;                    //Put into Rx mode
+    UCB0I2CSA = 0x0048;                    //Slave address = 0x48 LM92
     UCB0CTLW0 |= UCTXSTT;
     delay(100);
 
@@ -147,30 +143,33 @@ void getTemperature() {
     }
 }
 
+//clears the DS1337 RTCs first 2 registers (seconds & minutes)
 void clearClock() {
     setI2CByteNum(3);
     mode = 2;
-    UCB0CTLW0 |= UCTR;      //Put into Tx mode
-    UCB0I2CSA = 0x0068;     //Slave address = 0x48 LM92
+    UCB0CTLW0 |= UCTR;                     //Put into Tx mode
+    UCB0I2CSA = 0x0068;                    //Slave address = 0x68 DS1337 RTC
     UCB0CTLW0 |= UCTXSTT;
     delay(100);
 }
 
+//gets the time from the DS1337 RTCs first 2 registers (seconds & minutes)
 void getTime() {
     setI2CByteNum(1);
     mode = 2;
-    UCB0CTLW0 |= UCTR;      //Put into Tx mode
-    UCB0I2CSA = 0x0068;     //Slave address = 0x48 LM92
+    UCB0CTLW0 |= UCTR;                     //Put into Tx mode
+    UCB0I2CSA = 0x0068;                    //Slave address = 0x68 DS1337 RTC
     UCB0CTLW0 |= UCTXSTT;
     delay(100);
     setI2CByteNum(2);
-    UCB0CTLW0 &= ~UCTR;      //Put into Rx mode
-    UCB0I2CSA = 0x0068;     //Slave address = 0x48 LM92
+    UCB0CTLW0 &= ~UCTR;                    //Put into Rx mode
+    UCB0I2CSA = 0x0068;                    //Slave address = 0x68 DS1337 RTC
     UCB0CTLW0 |= UCTXSTT;
     delay(100);
 
     tempSeconds = (((minHigh*10) + minLow)*60) + ((secHigh*10) + secLow);
 
+    //16mins & 59secs
     if(tempSeconds > 999) {
         clearClock();
     }
@@ -211,7 +210,7 @@ int main(void) {
     init_I2C();     //initialize I2C module
     init_UART();    //initialize UART module
     init_Keypad();  //initialize Keypad
-    init_TimerB();
+    init_TimerB();  //initialize TimerB
 
     PM5CTL0 &= ~LOCKLPM5;   //Disable LPM
 
@@ -220,12 +219,6 @@ int main(void) {
     clearClock();
 
     while(1){
-        //message[0] = '1';
-        //getTime();
-        //getTemperature();
-        //sendDataToSlave();
-        //delay(1000);
-
         if(data_ready == 1) {
             switch(input) {
                 case '0':
@@ -254,7 +247,6 @@ int main(void) {
                     break;
             }
         }
-
     }
     return 0;
 }
