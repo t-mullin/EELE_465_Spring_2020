@@ -4,7 +4,7 @@
 
 /*
  * TODO: change some variable names to make it clearer what they are for.
- *
+ *       disable timer when reseting the timer registers so that it can finish
  * */
 
 #include <msp430.h> 
@@ -15,7 +15,7 @@
 //-- End of Define Constants
 
 //-- Global Variables
-char input;
+char input = '0';
 int data_ready = 0;
 int position = 0;
 int mode = 0;
@@ -23,8 +23,13 @@ int getLow = 0;
 int tempLM92;
 float tempTemp = 0;
 int getMins = 0;
+int tempSeconds;
 int seconds;
+int secHigh;
+int secLow;
 int minutes;
+int minHigh;
+int minLow;
 char message[7]; // ie 1230232
 //-- End of Global Variables
 
@@ -81,6 +86,18 @@ void init_Keypad() {
     P2IE = 0x0F;
 
 }
+
+void init_TimerB() {
+    TB0CTL |= TBCLR;
+    TB0CTL |= TBSSEL__ACLK;
+    TB0CTL |= MC__CONTINUOUS;
+    TB0CTL |= CNTL_1;
+    TB0CTL |= ID__8;
+
+    TB0CTL |= TBIE;
+    TB0CTL &= ~TBIFG;
+
+}
 //-- End of Initialization Functions
 
 //simple for loop based delay function
@@ -99,6 +116,8 @@ void setI2CByteNum(int bytes) {
         UCB0TBCNT = 0x01;
     } else if (bytes == 2) {
         UCB0TBCNT = 0x02;
+    } else if (bytes == 3) {
+        UCB0TBCNT = 0x03;
     }
     //-- 4.A Take eUSCI_B0 out of SW reset
     UCB0CTLW0 &= ~UCSWRST;  //UCSWRST=1 for eUSCI_B0 in SW reset
@@ -128,6 +147,15 @@ void getTemperature() {
     }
 }
 
+void clearClock() {
+    setI2CByteNum(3);
+    mode = 2;
+    UCB0CTLW0 |= UCTR;      //Put into Tx mode
+    UCB0I2CSA = 0x0068;     //Slave address = 0x48 LM92
+    UCB0CTLW0 |= UCTXSTT;
+    delay(100);
+}
+
 void getTime() {
     setI2CByteNum(1);
     mode = 2;
@@ -135,11 +163,29 @@ void getTime() {
     UCB0I2CSA = 0x0068;     //Slave address = 0x48 LM92
     UCB0CTLW0 |= UCTXSTT;
     delay(100);
-    setI2CByteNum(1);
+    setI2CByteNum(2);
     UCB0CTLW0 &= ~UCTR;      //Put into Rx mode
     UCB0I2CSA = 0x0068;     //Slave address = 0x48 LM92
     UCB0CTLW0 |= UCTXSTT;
     delay(100);
+
+    tempSeconds = (((minHigh*10) + minLow)*60) + ((secHigh*10) + secLow);
+
+    if(tempSeconds > 999) {
+        clearClock();
+    }
+
+    seconds = tempSeconds;
+
+    int i;
+    for(i = 0; i < 3; i++) {
+        if(message[0] == '0') {
+            message[6-i] = '0';
+        } else {
+            message[6-i] = (tempSeconds % 10) + '0';
+            tempSeconds /= 10;
+        }
+    }
 }
 
 //starts the I2C and UART transmissions.
@@ -165,38 +211,61 @@ int main(void) {
     init_I2C();     //initialize I2C module
     init_UART();    //initialize UART module
     init_Keypad();  //initialize Keypad
+    init_TimerB();
 
     PM5CTL0 &= ~LOCKLPM5;   //Disable LPM
 
     __enable_interrupt();   //Enable Maskable IRQs
 
+    clearClock();
+
     while(1){
-        getTime();
-        /*
+        //message[0] = '1';
+        //getTime();
+        //getTemperature();
+        //sendDataToSlave();
+        //delay(1000);
+
         if(data_ready == 1) {
             switch(input) {
                 case '0':
                     message[0] = '0';
-                    getTemperature();
+                    getTime();
+                    if(seconds % 2 == 0) {
+                        getTemperature();
+                    }
                     sendDataToSlave();
                     break;
                 case '1':
                     message[0] = '1';
-                    getTemperature();
+                    getTime();
+                    if(seconds % 2 == 0) {
+                        getTemperature();
+                    }
                     sendDataToSlave();
                     break;
                 case '2':
                     message[0] = '2';
-                    getTemperature();
+                    getTime();
+                    if(seconds % 2 == 0) {
+                        getTemperature();
+                    }
                     sendDataToSlave();
                     break;
             }
         }
-        */
+
     }
     return 0;
 }
 //------- Interrupt Service Routines ---------------------------
+//TIMER B
+#pragma vector=TIMER0_B1_VECTOR
+__interrupt void TB0_Overflow_ISR(void) {
+    data_ready = 1;
+    TB0CTL &= ~TBIFG;
+}
+
 //I2C
 #pragma vector=USCI_B0_VECTOR
 __interrupt void USCI_B0_ISR(void) {
@@ -217,10 +286,13 @@ __interrupt void USCI_B0_ISR(void) {
             } else {
                 if(getMins == 1) {
                     minutes = UCB0RXBUF;
-                    seconds += 60*minutes;
+                    minLow = minutes & 0x000F;
+                    minHigh = minutes >> 4;
                     getMins = 0;
                 } else {
                     seconds = UCB0RXBUF;
+                    secLow = seconds & 0x000F;
+                    secHigh = seconds >> 4;
                     getMins = 1;
                 }
             }
@@ -247,12 +319,14 @@ __interrupt void USCI_B0_ISR(void) {
 #pragma vector=USCI_A0_VECTOR
 __interrupt void USCI_A0_RX_ISR(void) {
     input = UCA0RXBUF;
+    clearClock();
+    init_TimerB();
     data_ready = 1;
 }
 
 //PORT2
 #pragma vector=PORT2_VECTOR
-__interrupt void PORT2_ISR(void){
+__interrupt void PORT2_ISR(void) {
     switch(P2IV){
         case 0x02:
             P2DIR = 0x0F;
