@@ -2,11 +2,6 @@
 //5/4/2020
 //Lab 6 & 7: Temperature readings from LM92, Time readings DS1337 RTC being displayed on a LCD, and
 //Thermoelectric cooler state controller.
-
-/*
- * TODO: change some variable names to make it clearer what they are for.
- * */
-
 #include <msp430.h> 
 #include <math.h>
 
